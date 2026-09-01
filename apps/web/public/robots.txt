@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /$
+Allow: /scan
+Allow: /legal/
+Disallow: /dashboard/
+Disallow: /auth/

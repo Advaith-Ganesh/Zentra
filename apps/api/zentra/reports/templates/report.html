@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ title }}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm 16mm 18mm 16mm;
+      @top-left { content: "{{ brand.name }} — Vendor Risk Register"; font-size: 7.5pt; color: #6b7280; }
+      @bottom-left { content: "{{ organization.name }} · Generated {{ generated_at_display }}"; font-size: 7.5pt; color: #6b7280; }
+      @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 7.5pt; color: #6b7280; }
+    }
+    @page cover { margin: 0; @top-left { content: none } @bottom-left { content: none } @bottom-right { content: none } }
+
+    * { box-sizing: border-box; }
+    body { font-family: "DejaVu Sans", "Helvetica", sans-serif; font-size: 9.5pt; color: #16181d; line-height: 1.5; margin: 0; }
+    h1, h2, h3 { font-weight: 650; margin: 0 0 8px; letter-spacing: -0.01em; }
+    h2 { font-size: 14pt; margin-top: 22px; padding-bottom: 6px; border-bottom: 1.5px solid #16181d; }
+    h3 { font-size: 11pt; margin-top: 16px; }
+    p { margin: 0 0 9px; }
+    .muted { color: #6b7280; }
+    .small { font-size: 8pt; }
+
+    /* ---------- cover ---------- */
+    .cover { page: cover; height: 297mm; background: #0b0c0e; color: #f4f5f7; padding: 30mm 22mm; position: relative; }
+    .cover .wordmark { font-size: 11pt; letter-spacing: 0.4em; font-weight: 700; color: #9aa2ae; }
+    .cover .accent { width: 46mm; height: 2px; background: #f4f5f7; margin: 8mm 0 12mm; }
+    .cover h1 { font-size: 30pt; line-height: 1.15; color: #fff; max-width: 130mm; }
+    .cover .subject { font-size: 15pt; margin-top: 6mm; color: #cbd2dc; }
+    .cover .meta { position: absolute; bottom: 30mm; left: 22mm; right: 22mm; font-size: 9pt; color: #9aa2ae; }
+    .cover .meta dl { display: block; margin: 0; }
+    .cover .meta .row { padding: 3mm 0; border-top: 1px solid #2a2d33; }
+    .cover .meta .k { color: #6f7885; text-transform: uppercase; letter-spacing: 0.14em; font-size: 7pt; }
+    .cover .meta .v { color: #e6e9ee; font-size: 10pt; }
+    .cover .logo { max-height: 18mm; max-width: 60mm; margin-bottom: 10mm; }
+
+    .page-break { page-break-before: always; }
+
+    /* ---------- summary tiles ---------- */
+    .tiles { display: table; width: 100%; border-collapse: separate; border-spacing: 4pt 0; margin: 12px 0 6px; }
+    .tile { display: table-cell; width: 20%; border: 1px solid #d7dbe0; padding: 8pt; vertical-align: top; }
+    .tile .n { font-size: 20pt; font-weight: 680; line-height: 1.1; }
+    .tile .l { font-size: 7pt; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; margin-top: 3pt; }
+
+    /* ---------- tables ---------- */
+    table.register { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 8.2pt; }
+    table.register th { text-align: left; background: #f2f3f5; border-bottom: 1.5px solid #16181d; padding: 5pt 4pt; font-size: 7.2pt; text-transform: uppercase; letter-spacing: 0.08em; color: #3f4650; }
+    table.register td { border-bottom: 1px solid #e3e6ea; padding: 5pt 4pt; vertical-align: top; }
+    table.register tr { page-break-inside: avoid; }
+
+    .risk { display: inline-block; padding: 1pt 5pt; border: 1px solid; font-size: 7pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+    .risk-low { color: #14532d; border-color: #14532d; }
+    .risk-medium { color: #854d0e; border-color: #854d0e; }
+    .risk-high { color: #9a3412; border-color: #9a3412; }
+    .risk-critical { color: #7f1d1d; border-color: #7f1d1d; background: #fdf1f1; }
+    .risk-none { color: #4b5563; border-color: #9ca3af; }
+
+    .score { font-weight: 700; font-size: 10pt; }
+
+    /* ---------- vendor detail ---------- */
+    .vendor { page-break-inside: avoid; margin-top: 18px; border-top: 2px solid #16181d; padding-top: 10px; }
+    .vendor-head { display: table; width: 100%; }
+    .vendor-head .left { display: table-cell; width: 70%; vertical-align: top; }
+    .vendor-head .right { display: table-cell; width: 30%; text-align: right; vertical-align: top; }
+    .vendor-head .name { font-size: 13pt; font-weight: 650; }
+    .bigscore { font-size: 26pt; font-weight: 700; line-height: 1; }
+
+    .breakdown { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 8pt; }
+    .breakdown td { padding: 3pt 4pt; border-bottom: 1px solid #eceef1; }
+    .breakdown td.pts { text-align: right; width: 60pt; font-variant-numeric: tabular-nums; }
+    .bar { height: 5pt; background: #e6e9ed; position: relative; width: 100%; }
+    .bar span { display: block; height: 5pt; background: #16181d; }
+
+    .finding { border-left: 3px solid #d7dbe0; padding: 4pt 0 4pt 8pt; margin: 7pt 0; page-break-inside: avoid; }
+    .finding.sev-critical { border-left-color: #7f1d1d; }
+    .finding.sev-high { border-left-color: #9a3412; }
+    .finding.sev-medium { border-left-color: #854d0e; }
+    .finding.sev-low { border-left-color: #4b5563; }
+    .finding .t { font-weight: 650; font-size: 9pt; }
+    .finding .rec { margin-top: 3pt; font-size: 8.2pt; }
+    .finding .prov { margin-top: 3pt; color: #6b7280; font-size: 7.2pt; }
+
+    .callout { border: 1px solid #d7dbe0; background: #f8f9fa; padding: 8pt 10pt; margin: 10px 0; font-size: 8.5pt; }
+    .disclaimer { border-top: 1px solid #d7dbe0; margin-top: 20px; padding-top: 10px; font-size: 7.5pt; color: #4b5563; }
+    ul { margin: 0 0 9px; padding-left: 14pt; }
+    li { margin-bottom: 3pt; }
+  </style>
+</head>
+<body>
+
+<section class="cover">
+  {% if brand.logo_data_uri %}<img class="logo" src="{{ brand.logo_data_uri }}" alt="">{% endif %}
+  <div class="wordmark">{{ brand.wordmark }}</div>
+  <div class="accent" {% if brand.color %}style="background: {{ brand.color }}"{% endif %}></div>
+  <h1>Vendor Risk Register</h1>
+  <div class="subject">{{ organization.name }}</div>
+  <div class="meta">
+    <div class="row"><div class="k">Report date</div><div class="v">{{ generated_at_display }}</div></div>
+    <div class="row"><div class="k">Vendors assessed</div><div class="v">{{ vendors|length }}</div></div>
+    <div class="row"><div class="k">Assessment period</div><div class="v">{{ period }}</div></div>
+    <div class="row"><div class="k">Prepared by</div><div class="v">{{ brand.prepared_by }}</div></div>
+    {% if requested_by %}<div class="row"><div class="k">Requested by</div><div class="v">{{ requested_by }}</div></div>{% endif %}
+  </div>
+</section>
+
+<section class="page-break">
+  <h2>Executive summary</h2>
+  <p>
+    This register records {{ organization.name }}'s third-party vendors and the security
+    signals Zentra observed for each of them from publicly available sources on
+    {{ generated_at_display }}.
+  </p>
+
+  <div class="tiles">
+    <div class="tile"><div class="n">{{ summary.total_vendors }}</div><div class="l">Vendors</div></div>
+    <div class="tile"><div class="n">{{ summary.critical_vendors }}</div><div class="l">Critical risk</div></div>
+    <div class="tile"><div class="n">{{ summary.high_risk_vendors }}</div><div class="l">High risk</div></div>
+    <div class="tile"><div class="n">{{ summary.average_score if summary.average_score is not none else '—' }}</div><div class="l">Average score</div></div>
+    <div class="tile"><div class="n">{{ summary.open_findings }}</div><div class="l">Open findings</div></div>
+  </div>
+
+  <p class="small muted">
+    Scores run from 0 to 100, where a higher score means more observed risk.
+    0–24 Low · 25–49 Medium · 50–74 High · 75–100 Critical.
+  </p>
+
+  {% if summary.vendors_needing_attention %}
+  <div class="callout">
+    <strong>{{ summary.vendors_needing_attention }} vendor(s) need attention.</strong>
+    These carry high or critical risk signals and are listed first in the register below.
+    Each has a recommended next action.
+  </div>
+  {% else %}
+  <div class="callout">
+    No vendor in this register currently carries high or critical risk signals across the
+    checks that completed.
+  </div>
+  {% endif %}
+
+  {% if unscored_vendors %}
+  <p class="small">
+    {{ unscored_vendors }} vendor(s) could not be scored because too few checks completed.
+    They are listed with a status of “Not assessed”. An incomplete assessment is not an
+    indication that a vendor is low risk.
+  </p>
+  {% endif %}
+
+  <h2>Vendor risk register</h2>
+  <table class="register">
+    <thead>
+      <tr>
+        <th style="width:17%">Vendor</th>
+        <th style="width:16%">Domain</th>
+        <th style="width:7%">Score</th>
+        <th style="width:10%">Risk level</th>
+        <th style="width:11%">Last assessed</th>
+        <th style="width:20%">Key findings</th>
+        <th style="width:19%">Recommended action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in vendors %}
+      <tr>
+        <td><strong>{{ v.name }}</strong>{% if v.criticality %}<br><span class="small muted">{{ v.criticality|title }} criticality</span>{% endif %}</td>
+        <td class="small">{{ v.domain }}</td>
+        <td class="score">{{ v.score if v.score is not none else '—' }}</td>
+        <td><span class="risk risk-{{ v.risk_level or 'none' }}">{{ (v.risk_level or 'not assessed')|title }}</span></td>
+        <td class="small">{{ v.last_assessed or 'Never' }}</td>
+        <td class="small">
+          {% if v.key_findings %}<ul>{% for f in v.key_findings %}<li>{{ f }}</li>{% endfor %}</ul>
+          {% else %}<span class="muted">No significant issues detected.</span>{% endif %}
+        </td>
+        <td class="small">{{ v.recommended_action }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="page-break">
+  <h2>Detailed findings</h2>
+  {% for v in vendors %}
+  <div class="vendor">
+    <div class="vendor-head">
+      <div class="left">
+        <div class="name">{{ v.name }}</div>
+        <div class="small muted">{{ v.domain }}{% if v.category %} · {{ v.category }}{% endif %}{% if v.owner %} · Owner: {{ v.owner }}{% endif %}</div>
+      </div>
+      <div class="right">
+        <div class="bigscore">{{ v.score if v.score is not none else '—' }}{% if v.score is not none %}<span class="small muted">/100</span>{% endif %}</div>
+        <span class="risk risk-{{ v.risk_level or 'none' }}">{{ (v.risk_level or 'not assessed')|title }}</span>
+      </div>
+    </div>
+
+    {% if v.verdict %}
+    <p style="margin-top:8pt">{{ v.verdict.explanation }}</p>
+    {% endif %}
+
+    {% if v.breakdown %}
+    <h3>Score breakdown</h3>
+    <table class="breakdown">
+      {% for c in v.breakdown %}
+      <tr>
+        <td style="width:32%">{{ c.display_name }}{% if not c.assessed %} <span class="small muted">(not assessed)</span>{% endif %}</td>
+        <td><div class="bar"><span style="width: {{ c.pct }}%"></span></div></td>
+        <td class="pts">{{ c.points }} / {{ c.max_points }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    <p class="small muted">Points are risk contributed, so lower is better. Categories marked
+      “not assessed” contributed no risk points.</p>
+    {% endif %}
+
+    {% if v.findings %}
+    <h3>Open findings</h3>
+    {% for f in v.findings %}
+    <div class="finding sev-{{ f.severity }}">
+      <div class="t">{{ f.title }} <span class="small muted">— {{ f.severity|title }} · {{ f.status_label }}</span></div>
+      <div>{{ f.description }}</div>
+      <div class="rec"><strong>Recommended action:</strong> {{ f.recommendation }}</div>
+      <div class="prov">Source: {{ f.source }} · First seen {{ f.first_seen }} · Last confirmed {{ f.last_seen }} · Confidence {{ f.confidence }}</div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p class="small muted" style="margin-top:8pt">No open findings recorded for this vendor.</p>
+    {% endif %}
+
+    {% if v.unassessed %}
+    <p class="small muted">Not assessed in the latest scan: {{ v.unassessed|join(', ') }}.</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</section>
+
+<section class="page-break">
+  <h2>Methodology</h2>
+  <p>
+    Zentra assesses each vendor domain using passive checks against publicly available
+    sources. No intrusive testing, authentication attempt or exploitation of any kind is
+    performed against a vendor's systems.
+  </p>
+  <h3>Checks performed</h3>
+  <ul>
+    <li><strong>TLS / certificate</strong> — certificate validity and expiry, protocol versions and cipher strength.</li>
+    <li><strong>Breach history</strong> — publicly catalogued data breaches associated with the vendor's domain (breach metadata only; no account-level data is retrieved or stored).</li>
+    <li><strong>Internet exposure</strong> — services already indexed as publicly reachable by third-party internet-scan data.</li>
+    <li><strong>Known vulnerabilities</strong> — published CVEs matched to software versions the vendor's own servers disclose.</li>
+    <li><strong>Email / DNS security</strong> — SPF, DMARC, DKIM discovery and CAA records.</li>
+    <li><strong>Web hardening</strong> — browser security response headers.</li>
+  </ul>
+
+  <h3>Scoring</h3>
+  <p>
+    Each check produces a normalized result with a status, a severity and a confidence value.
+    Results roll up into six weighted categories that total 100 points: TLS/certificate (25),
+    breach history (20), internet exposure (20), known vulnerabilities (15), email/DNS security
+    (15) and web hardening (5). Additional findings within one category contribute
+    progressively less, so a single noisy category cannot dominate the score. A conclusive
+    critical-severity finding sets a minimum score of 50; two or more set a minimum of 75.
+  </p>
+
+  <h3>Handling of missing data</h3>
+  <p>
+    A check that could not be completed — because a data source was unavailable, or because
+    the information is not discoverable from public sources — is recorded as “not assessed”.
+    It contributes no risk points and is never treated as a security failure. Instead it
+    reduces the assessment's coverage and confidence, both of which are reported. Where
+    coverage is too thin to be meaningful, Zentra declines to publish a risk level rather than
+    presenting an unreliable one.
+  </p>
+
+  <h3>Confidence and provenance</h3>
+  <p>
+    Every finding records the source it came from, when it was observed and how confident
+    Zentra is in it. Findings derived from a vendor's self-declared software version are
+    indicators rather than proof: a vendor may have applied a backported fix that the declared
+    version does not reflect.
+  </p>
+
+  <div class="disclaimer">
+    <p><strong>Important.</strong> Zentra's risk scores are informational assessments based on
+    signals available from public sources. They should not be interpreted as legal,
+    regulatory, audit or certification advice, and they are not a substitute for a security
+    review, a penetration test or a formal vendor due-diligence process.</p>
+    <p>This report is intended to support a vendor risk management process and to provide
+    evidence of ongoing third-party monitoring. It does not itself confer, demonstrate or
+    guarantee compliance with any standard or certification scheme. Where a specific control
+    requirement applies to your organization, confirm the position with your auditor or
+    adviser.</p>
+    <p>Findings reflect what was observable at the time of assessment. The absence of a finding
+    is not a guarantee that no issue exists.</p>
+    <p class="muted">Prepared by {{ brand.prepared_by }} · {{ generated_at_display }} · Report ID {{ report_id }}</p>
+  </div>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+
+  html {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-ink-950 text-silver-200 antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'ss01';
+  }
+
+  /* A single, consistent focus treatment everywhere. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-silver-200 ring-offset-2 ring-offset-ink-950;
+  }
+
+  ::selection {
+    @apply bg-silver-200 text-ink-950;
+  }
+
+  /* Respect a user's reduced-motion preference. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-ink-950;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-sm bg-ink-700;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-ink-600;
+  }
+}
+
+@layer components {
+  .zentra-wordmark {
+    @apply font-semibold uppercase tracking-brand text-silver-50;
+  }
+
+  /* Skip link: visually hidden until focused. */
+  .skip-link {
+    @apply absolute left-4 top-4 z-[100] -translate-y-24 rounded-sm bg-silver-50 px-4 py-2 text-sm font-medium text-ink-950 transition-transform focus:translate-y-0;
+  }
+
+  .surface-grid {
+    background-image:
+      linear-gradient(to right, rgba(35, 41, 50, 0.5) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(35, 41, 50, 0.5) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+}

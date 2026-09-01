@@ -1,0 +1,86 @@
+[project]
+name = "zentra-api"
+version = "0.1.0"
+description = "Zentra — vendor risk intelligence API, scanning engine and worker"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi==0.141.1",
+  "uvicorn[standard]==0.52.4",
+  "pydantic==2.13.5",
+  "pydantic-settings==2.7.1",
+  "email-validator==2.2.0",
+  "sqlalchemy==2.0.52",
+  "psycopg[binary]==3.3.5",
+  "celery==5.6.3",
+  "redis==8.1.0",
+  "httpx==0.28.1",
+  "dnspython==2.8.0",
+  "jinja2==3.1.6",
+  "weasyprint==69.0",
+  "pyjwt==2.13.0",
+  "argon2-cffi==23.1.0",
+  "cryptography==50.0.1",
+  "stripe==15.6.0",
+  "structlog==26.1.0",
+  "tenacity==9.0.0",
+  "python-multipart==0.0.32",
+  "idna==3.15",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==9.0.3",
+  "pytest-asyncio==1.3.0",
+  "pytest-cov==7.0.0",
+  "ruff==0.14.7",
+  "mypy==1.19.1",
+  "types-requests==2.32.0.20241016",
+  "bandit==1.9.2",
+  "pip-audit==2.9.0",
+  "respx==0.22.0",
+  "freezegun==1.5.5",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["zentra*"]
+
+[tool.setuptools.package-data]
+zentra = ["reports/templates/*.html", "reports/templates/*.css"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["."]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "S", "RUF", "BLE", "ASYNC"]
+# RUF001/RUF002/RUF003: en dashes and typographic quotes are deliberate in
+# customer-facing prose and docstrings.
+ignore = ["S101", "B008", "S104", "RUF012", "N818", "RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "E501"]
+"zentra/scripts/*" = ["S603", "S607"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
+ignore_missing_imports = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+plugins = []
+exclude = "(build|dist)/"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = ["ignore::DeprecationWarning"]
+addopts = "-q"
+
+[tool.bandit]
+exclude_dirs = ["tests", "build", "dist"]
