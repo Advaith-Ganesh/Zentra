@@ -25,6 +25,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+# Optional additional trust roots, for networks that terminate TLS on an
+# inspecting proxy. Empty by default, so this is a no-op in normal builds.
+COPY infrastructure/docker/certs/ /usr/local/share/ca-certificates/
+RUN update-ca-certificates \
+    && rm -f /usr/local/share/ca-certificates/README.md
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt
+
 WORKDIR /app
 
 # ---------------------------------------------------------------- dependencies
@@ -46,12 +55,15 @@ COPY --from=deps /install /usr/local
 COPY apps/api /app/apps/api
 COPY supabase/migrations /app/supabase/migrations
 
-RUN mkdir -p /app/storage/reports && chown -R zentra:zentra /app/storage
+# Report output, plus a writable directory for Celery beat's schedule file.
+# Beat runs as the unprivileged user and cannot write to the working directory.
+RUN mkdir -p /app/storage/reports /app/state && chown -R zentra:zentra /app/storage /app/state
 WORKDIR /app/apps/api
 USER zentra
 
 ENV PYTHONPATH=/app/apps/api \
-    REPORT_STORAGE_DIR=/app/storage/reports
+    REPORT_STORAGE_DIR=/app/storage/reports \
+    CELERYBEAT_SCHEDULE=/app/state/celerybeat-schedule
 
 EXPOSE 8000
 

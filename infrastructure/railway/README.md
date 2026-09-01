@@ -7,7 +7,7 @@ Postgres (or hosted Supabase) and Redis.
 | --- | --- | --- |
 | `zentra-api` | `infrastructure/docker/api.Dockerfile` | default (`uvicorn`) |
 | `zentra-worker` | `infrastructure/docker/api.Dockerfile` | `celery -A zentra.workers.celery_app:celery_app worker --loglevel=INFO --concurrency=4` |
-| `zentra-beat` | `infrastructure/docker/api.Dockerfile` | `celery -A zentra.workers.celery_app:celery_app beat --loglevel=INFO` |
+| `zentra-beat` | `infrastructure/docker/api.Dockerfile` | `celery -A zentra.workers.celery_app:celery_app beat --loglevel=INFO --schedule=/app/state/celerybeat-schedule` |
 
 The frontend deploys to Vercel or to a fourth Railway service using
 `infrastructure/docker/web.Dockerfile`.

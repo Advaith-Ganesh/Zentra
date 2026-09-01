@@ -53,6 +53,10 @@ x-api-env: &api-env
   ZENTRA_ADMIN_EMAILS: ${ZENTRA_ADMIN_EMAILS:-}
 
 x-api-build: &api-build
+  # One image serves the API, the worker, the scheduler and the migration
+  # runner. Naming it explicitly means Compose builds it once rather than four
+  # times, and guarantees all four run identical code.
+  image: zentra-api:local
   build:
     context: .
     dockerfile: infrastructure/docker/api.Dockerfile
@@ -136,12 +140,17 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
+      # `inspect ping` needs a longer window than its default: the worker only
+      # answers on the broker's control channel, and a cold reply can take a
+      # few seconds. The API's HTTP health check is inherited from the shared
+      # image and is meaningless here, so it is replaced rather than kept.
       test:
-        ["CMD", "celery", "-A", "zentra.workers.celery_app:celery_app", "inspect", "ping", "-d", "celery@$$HOSTNAME"]
+        - CMD-SHELL
+        - celery -A zentra.workers.celery_app:celery_app inspect ping -t 20 | grep -q pong
       interval: 30s
-      timeout: 10s
+      timeout: 25s
       retries: 3
-      start_period: 30s
+      start_period: 45s
 
   # Scheduled rescans, stuck-scan reaping, benchmark recomputation.
   beat:
@@ -153,6 +162,13 @@ services:
       - zentra.workers.celery_app:celery_app
       - beat
       - --loglevel=INFO
+      # Beat runs unprivileged and cannot write to the working directory.
+      - --schedule=/app/state/celerybeat-schedule
+    # Beat has no HTTP surface and no control-channel responder, so the API's
+    # inherited health check is meaningless. It is monitored by whether the
+    # tasks it schedules actually run.
+    healthcheck:
+      disable: true
     depends_on:
       migrate:
         condition: service_completed_successfully

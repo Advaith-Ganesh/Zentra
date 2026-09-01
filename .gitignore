@@ -49,3 +49,4 @@ dump.rdb
 # Local dev conveniences
 apps/api/.audit-venv/
 apps/web/.env.local
+infrastructure/docker/certs/*.crt
