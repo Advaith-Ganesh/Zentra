@@ -316,6 +316,12 @@ rather than inventing a result.
 
 **Free scan returns 429.** By design — three per hour per requester.
 
+**Backend tests fail with `password authentication failed for user "postgres"`.**
+The Compose stack publishes Postgres on host port 5432, so it shadows a local
+one. Either stop it (`docker compose down`) before running the native test
+suite, or point `TEST_DATABASE_URL` at the container:
+`postgresql+psycopg://zentra:zentra@localhost:5432/zentra_test`.
+
 ## Known limitations
 
 Recorded honestly rather than omitted:
