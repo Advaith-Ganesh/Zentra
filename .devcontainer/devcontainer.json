@@ -1,0 +1,41 @@
+{
+  "name": "Zentra",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/python:1": { "version": "3.11" },
+    "ghcr.io/devcontainers/features/node:1": { "version": "20" }
+  },
+  "forwardPorts": [3000, 8000],
+  "portsAttributes": {
+    "3000": { "label": "Zentra frontend", "onAutoForward": "openBrowser" },
+    "8000": {
+      "label": "Zentra API",
+      "//": "Public so the browser-side frontend can call it cross-origin.",
+      "visibility": "public",
+      "onAutoForward": "silent"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "ms-python.mypy-type-checker",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "${workspaceFolder}/apps/api/.venv/bin/python",
+        "[python]": { "editor.defaultFormatter": "charliermarsh.ruff" },
+        "[typescript][typescriptreact]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        }
+      }
+    }
+  },
+  "postCreateCommand": "echo 'Zentra ready. Run: make demo'",
+  "remoteUser": "vscode"
+}

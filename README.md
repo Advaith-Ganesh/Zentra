@@ -106,6 +106,40 @@ docker compose exec api python -m zentra.scripts.seed
 Open <http://localhost:3000> and sign in as `demo@zentra.example` with the
 password the seeder prints.
 
+### GitHub Codespaces
+
+The repository ships a devcontainer, so you can run Zentra entirely in the
+browser with nothing installed locally. On the GitHub repository page choose
+**Code → Codespaces → Create codespace**, wait for it to build, then in the
+terminal run:
+
+```bash
+make demo
+```
+
+`make demo` goes through `scripts/compose.sh`, which detects the Codespace and
+points the app at `https://<codespace>-3000.app.github.dev` instead of
+localhost. This matters because the frontend bakes the API URL in at build
+time, and your browser is not on the container's localhost.
+
+**Set port 8000 to Public.** In the **Ports** panel, right-click port 8000 →
+*Port Visibility* → *Public*. The devcontainer requests this, but Codespaces
+sometimes falls back to private, and the browser cannot call a private port
+cross-origin. Port 3000 can stay private. Then open the forwarded 3000 URL.
+
+### VS Code
+
+Open the folder and use the **Dev Containers: Reopen in Container** command
+(requires the Dev Containers extension and Docker Desktop) — this uses the same
+devcontainer as Codespaces, so ports 3000 and 8000 forward to your real
+localhost and `make demo` behaves exactly as it does natively.
+
+Without Dev Containers, just open the folder and run `make demo` in the VS Code
+terminal; only Docker is required. The recommended extensions in
+`.devcontainer/devcontainer.json` (Ruff, mypy, ESLint, Prettier, Tailwind) are
+worth installing either way, and the Python interpreter to select is
+`apps/api/.venv/bin/python` after `make setup`.
+
 ### Running natively
 
 ```bash

@@ -27,9 +27,9 @@ x-api-env: &api-env
   SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY:-sHRxYnPTt9EHwSGtQ1c1qE1MMBLNwoFbcHXCoI0uZQY=}
   USE_MOCK_SCANNERS: ${USE_MOCK_SCANNERS:-true}
   EMAIL_PROVIDER: ${EMAIL_PROVIDER:-console}
-  APP_URL: http://localhost:3000
-  API_URL: http://localhost:8000
-  CORS_ALLOWED_ORIGINS: http://localhost:3000
+  APP_URL: ${APP_URL:-http://localhost:3000}
+  API_URL: ${API_URL:-http://localhost:8000}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
   REPORT_STORAGE_DIR: /app/storage/reports
   # Optional provider credentials. Absent by default; the product degrades to
   # "not assessed" rather than failing.
@@ -180,11 +180,11 @@ services:
       context: .
       dockerfile: infrastructure/docker/web.Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:8000
-        NEXT_PUBLIC_APP_URL: http://localhost:3000
+        NEXT_PUBLIC_API_URL: ${API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_APP_URL: ${APP_URL:-http://localhost:3000}
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
-      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_API_URL: ${API_URL:-http://localhost:8000}
+      NEXT_PUBLIC_APP_URL: ${APP_URL:-http://localhost:3000}
     ports:
       - "3000:3000"
     depends_on:

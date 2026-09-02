@@ -11,6 +11,7 @@ API_DIR  := apps/api
 WEB_DIR  := apps/web
 VENV     := $(API_DIR)/.venv
 PY       := $(VENV)/bin/python
+COMPOSE  := ./scripts/compose.sh
 PIP      := $(VENV)/bin/pip
 
 .PHONY: help
@@ -70,18 +71,18 @@ reseed: ## Recreate the demo dataset from scratch
 # ------------------------------------------------------------------ processes
 .PHONY: dev
 dev: ## Run the whole stack with Docker Compose
-	docker compose up --build
+	$(COMPOSE) up --build
 
 .PHONY: demo
 demo: ## One command: build, start everything, load demo data, print the login
-	docker compose up -d --build
+	$(COMPOSE) up -d --build
 	@echo "Waiting for the API to become healthy…"
 	@for i in $$(seq 1 90); do \
-	  if [ "$$(docker compose ps --format '{{.Service}} {{.Status}}' \
+	  if [ "$$($(COMPOSE) ps --format '{{.Service}} {{.Status}}' \
 	      | grep '^api ' | grep -c healthy)" = "1" ]; then break; fi; \
 	  sleep 2; \
 	done
-	@docker compose exec -T api python -m zentra.scripts.seed || \
+	@$(COMPOSE) exec -T api python -m zentra.scripts.seed || \
 	  { echo "Seeding failed. Check 'docker compose logs api'."; exit 1; }
 	@echo ""
 	@echo "  Zentra is running."
@@ -93,7 +94,7 @@ demo: ## One command: build, start everything, load demo data, print the login
 
 .PHONY: down
 down: ## Stop the Docker Compose stack
-	docker compose down
+	$(COMPOSE) down
 
 .PHONY: dev-api
 dev-api: ## Run the API with autoreload (needs Postgres and Redis)
@@ -113,7 +114,7 @@ dev-web: ## Run the frontend dev server
 
 .PHONY: services
 services: ## Start only Postgres and Redis in Docker
-	docker compose up -d postgres redis
+	$(COMPOSE) up -d postgres redis
 
 # ----------------------------------------------------------------------- tests
 .PHONY: test
