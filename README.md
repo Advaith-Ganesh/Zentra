@@ -81,19 +81,25 @@ scripts/       Helper scripts
 **Prerequisites:** Python 3.11+, Node 20+, Docker (or a local PostgreSQL 16 and
 Redis 7).
 
-The fastest path — everything in containers:
+The fastest path — one command, everything in containers:
 
 ```bash
 git clone https://github.com/Advaith-Ganesh/Zentra.git
 cd Zentra
-cp .env.example .env
-docker compose up --build
+make demo
 ```
 
-That starts Postgres, Redis, the API, a Celery worker, the beat scheduler and
-the frontend, and applies migrations automatically. Then load the demo dataset:
+`make demo` builds the images, starts Postgres, Redis, the API, a Celery worker,
+the beat scheduler and the frontend, applies migrations, waits for the API to
+report healthy, loads the demo dataset and prints the sign-in credentials. It
+needs no `.env` — Compose supplies development defaults for every variable.
+Stop everything with `make down`.
+
+If you would rather run the steps yourself:
 
 ```bash
+cp .env.example .env
+docker compose up --build            # migrations run automatically
 docker compose exec api python -m zentra.scripts.seed
 ```
 

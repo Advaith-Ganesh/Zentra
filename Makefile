@@ -72,6 +72,29 @@ reseed: ## Recreate the demo dataset from scratch
 dev: ## Run the whole stack with Docker Compose
 	docker compose up --build
 
+.PHONY: demo
+demo: ## One command: build, start everything, load demo data, print the login
+	docker compose up -d --build
+	@echo "Waiting for the API to become healthy…"
+	@for i in $$(seq 1 90); do \
+	  if [ "$$(docker compose ps --format '{{.Service}} {{.Status}}' \
+	      | grep '^api ' | grep -c healthy)" = "1" ]; then break; fi; \
+	  sleep 2; \
+	done
+	@docker compose exec -T api python -m zentra.scripts.seed || \
+	  { echo "Seeding failed. Check 'docker compose logs api'."; exit 1; }
+	@echo ""
+	@echo "  Zentra is running."
+	@echo "    Frontend : http://localhost:3000"
+	@echo "    API docs : http://localhost:8000/docs"
+	@echo ""
+	@echo "  Sign in at http://localhost:3000/auth/sign-in with the demo"
+	@echo "  credentials printed above. Stop everything with 'make down'."
+
+.PHONY: down
+down: ## Stop the Docker Compose stack
+	docker compose down
+
 .PHONY: dev-api
 dev-api: ## Run the API with autoreload (needs Postgres and Redis)
 	cd $(API_DIR) && .venv/bin/uvicorn zentra.main:app --reload --host 0.0.0.0 --port 8000
