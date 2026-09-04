@@ -22,7 +22,6 @@ dependencies = [
   "cryptography==50.0.1",
   "stripe==15.6.0",
   "structlog==26.1.0",
-  "tenacity==9.0.0",
   "python-multipart==0.0.32",
   "idna==3.15",
 ]

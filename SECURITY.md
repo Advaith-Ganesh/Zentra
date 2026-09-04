@@ -120,6 +120,35 @@ Using Zentra for reconnaissance in support of an attack, or as part of
 unauthorised security testing, breaches the Acceptable Use Policy and will end
 in account termination.
 
+## Known tradeoffs
+
+### Session tokens are held in `localStorage`
+
+The dashboard stores its access token in `localStorage` and sends it as a
+`Bearer` header. Anything that can execute JavaScript on the page can read it.
+
+This was chosen because the same API is consumed by two very different clients:
+the browser dashboard and server-side API-key integrations. A cookie-based
+session would need CSRF protection on every state-changing route and careful
+`SameSite` handling for the cross-origin development setup, while doing nothing
+for the API-key path.
+
+Compensating controls:
+
+- Short access-token lifetime, with re-authentication rather than a long-lived
+  refresh token in the browser.
+- A strict Content-Security-Policy (`object-src 'none'`, `base-uri 'none'`,
+  `frame-ancestors 'none'`).
+- No use of `dangerouslySetInnerHTML` anywhere in the frontend; the ESLint
+  config makes `react/no-danger` an error so it cannot be introduced silently.
+- React escapes interpolated values by default, and no user-supplied HTML is
+  rendered.
+
+The migration path, if the threat model changes, is an `httpOnly` `Secure`
+`SameSite=Lax` cookie for the dashboard plus a double-submit CSRF token, keeping
+the `X-API-Key` header for machine clients. This is a deliberate, documented
+decision rather than an oversight.
+
 ## Security practices in development
 
 - Dependencies are pinned exactly and audited in CI (`pip-audit`, `npm audit`).

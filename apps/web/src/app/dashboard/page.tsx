@@ -92,8 +92,12 @@ export default function DashboardOverviewPage() {
                 </Banner>
               )}
 
-              <div className="grid gap-6 lg:grid-cols-3">
-                <Card className="lg:col-span-2">
+              {/* grid-cols-1 (minmax(0, 1fr)) and min-w-0 keep these grid items
+                  from being sized by the wide tables they contain. See the
+                  known-limitation note in README about the residual horizontal
+                  pan this page still has on very narrow screens. */}
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <Card className="min-w-0 lg:col-span-2">
                   <CardHeader
                     title="Needs attention"
                     description="Highest-risk vendors first."
@@ -154,7 +158,7 @@ export default function DashboardOverviewPage() {
                   )}
                 </Card>
 
-                <Card>
+                <Card className="min-w-0">
                   <CardHeader
                     title="Recent alerts"
                     action={

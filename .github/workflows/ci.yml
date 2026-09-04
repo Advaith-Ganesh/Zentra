@@ -135,7 +135,10 @@ jobs:
 
       - name: Lint (eslint)
         working-directory: apps/web
-        run: npx eslint src
+        # Same command as `npm run lint`, so CI cannot pass on something a
+        # contributor's local lint would reject. Covers config files too, not
+        # just src/, and treats warnings as failures.
+        run: npm run lint
 
       - name: Type check (tsc)
         working-directory: apps/web

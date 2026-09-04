@@ -125,10 +125,16 @@ def rescan_due_vendors(limit: int = 200) -> dict[str, Any]:
 
             schedule_next_scan(vendor)
             queued.append(str(scan.id))
-    for scan_id in queued:
-        run_scan_task.delay(scan_id)
-    log.info("rescan_sweep", queued=len(queued))
-    return {"queued": len(queued)}
+    # Dispatch through the shared helper rather than calling .delay() directly.
+    # The scan rows and the moved-forward schedules are already committed, so a
+    # broker outage here must not abort the sweep and strand the vendors we have
+    # not reached yet; dispatch_scan logs the failure and leaves the scan queued
+    # for the stuck-scan reaper.
+    from zentra.workers.dispatch import dispatch_scan
+
+    dispatched = sum(1 for scan_id in queued if dispatch_scan(uuid.UUID(scan_id)) is not None)
+    log.info("rescan_sweep", queued=len(queued), dispatched=dispatched)
+    return {"queued": len(queued), "dispatched": dispatched}
 
 
 @shared_task(name="zentra.reap_stuck_scans")

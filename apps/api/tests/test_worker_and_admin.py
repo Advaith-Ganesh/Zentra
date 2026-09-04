@@ -338,3 +338,39 @@ def test_admin_is_unreachable_with_an_api_key(
     secret = platform_admin.post("/api/v1/api-keys", json={"name": "CI"}).json()["secret"]
     response = client.get("/api/v1/admin/overview", headers={"X-API-Key": secret})
     assert response.status_code == 404
+
+
+def test_rescan_sweep_survives_a_dead_broker(account: Account, db, monkeypatch) -> None:
+    """A broker outage must not abort the sweep mid-way.
+
+    The scan rows and the moved-forward schedules are committed before dispatch.
+    If the dispatch call raised, every vendor after the failing one would keep
+    its new next_scan_at while never being queued, so the sweep would silently
+    skip them until the following interval. This drives the real failure — the
+    broker refusing the publish — rather than stubbing the helper that handles it.
+    """
+    from zentra.workers import dispatch as dispatch_module
+    from zentra.workers import tasks as tasks_module
+
+    vendor, scan = _vendor_and_scan(account, db, "broker-down.io")
+    from zentra.services import scans as scans_service
+
+    scans_service.execute_scan(db, scan.id)
+    vendor.next_scan_at = datetime.now(UTC) - timedelta(hours=1)
+    db.commit()
+
+    # Let dispatch run in the test environment, then make the broker publish fail.
+    monkeypatch.setenv("ZENTRA_TEST_DISPATCH", "1")
+
+    def refuse(*_args: object, **_kwargs: object) -> None:
+        raise ConnectionError("Error 111 connecting to redis:6379. Connection refused.")
+
+    monkeypatch.setattr(tasks_module.run_scan_task, "delay", refuse)
+    # Inline fallback is for interactive development; keep the test hermetic.
+    monkeypatch.setattr(dispatch_module, "_run_inline", lambda _scan_id: None)
+
+    result = tasks_module.rescan_due_vendors()
+
+    # The sweep completed rather than raising, and reported nothing dispatched.
+    assert result["queued"] >= 1
+    assert result["dispatched"] == 0

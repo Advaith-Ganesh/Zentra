@@ -308,3 +308,31 @@ def test_report_download_is_confined_to_the_storage_directory(
 
     with pytest.raises(NotFoundError):
         reports_service.read_export(db, export=export)
+
+
+def test_pdf_renderer_blocks_external_resources() -> None:
+    """The report renderer must never fetch a remote resource.
+
+    Autoescaping already stops a vendor name injecting markup, but that is one
+    template change away from being untrue. This asserts the second control:
+    anything that is not an inline data URI is refused outright.
+    """
+    from zentra.reports.pdf import ReportResourceBlocked, _inline_only_url_fetcher
+
+    for blocked in (
+        "http://169.254.169.254/latest/meta-data/",  # cloud metadata
+        "http://127.0.0.1:8000/api/v1/me",
+        "https://example.com/logo.png",
+        "file:///etc/passwd",
+    ):
+        with pytest.raises(ReportResourceBlocked):
+            _inline_only_url_fetcher(blocked)
+
+
+def test_pdf_renderer_allows_inline_data_uri() -> None:
+    """A validated inline logo must still render, or the block would break reports."""
+    from zentra.reports.pdf import _inline_only_url_fetcher
+
+    # 1x1 transparent GIF.
+    gif = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+    assert _inline_only_url_fetcher(gif).read()[:4] == b"GIF8"

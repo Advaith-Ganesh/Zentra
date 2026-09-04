@@ -142,7 +142,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         redoc_url=None if settings.is_production else "/redoc",
         openapi_url="/openapi.json",
         contact={"name": "Zentra", "url": settings.app_url},
-        license_info={"name": "Proprietary"},
+        license_info={"name": "MIT", "url": "https://opensource.org/licenses/MIT"},
         servers=[{"url": settings.api_url, "description": settings.environment}],
     )
 

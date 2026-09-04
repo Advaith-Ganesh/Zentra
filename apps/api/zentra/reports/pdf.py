@@ -109,12 +109,34 @@ def render_html(context: dict[str, Any], template_name: str = "report.html") -> 
     return _environment.get_template(template_name).render(**context)
 
 
+class ReportResourceBlocked(Exception):
+    """Raised when the report template asks for a resource other than a data URI."""
+
+
+def _inline_only_url_fetcher(url: str) -> Any:
+    """Allow ``data:`` URIs and refuse every other resource.
+
+    WeasyPrint fetches whatever the document references. ``base_url=None`` stops
+    *relative* URLs resolving, but an absolute ``http://169.254.169.254/...``
+    would still be requested, which would make the PDF renderer an SSRF sink.
+    Every asset a Zentra report needs is already inlined as a data URI, so the
+    safe set is exactly that, enforced here rather than left to the template.
+    """
+    if url.startswith("data:"):
+        from weasyprint.urls import default_url_fetcher
+
+        # Returned as-is: WeasyPrint accepts its own response object, and the
+        # concrete type has changed across releases.
+        return default_url_fetcher(url)
+    log.warning("report_external_resource_blocked", scheme=url.split(":", 1)[0][:16])
+    raise ReportResourceBlocked(url)
+
+
 def render_pdf(context: dict[str, Any], template_name: str = "report.html") -> bytes:
     """Render the report to PDF bytes."""
     from weasyprint import HTML
 
     html = render_html(context, template_name)
-    # base_url is deliberately None: with no base URL WeasyPrint cannot resolve
-    # any relative external resource, so a crafted template value cannot cause
-    # an outbound fetch. All assets are inline data URIs.
-    return HTML(string=html, base_url=None).write_pdf()
+    # Two independent controls: base_url=None stops relative URLs resolving, and
+    # the fetcher refuses anything that is not an inline data URI.
+    return HTML(string=html, base_url=None, url_fetcher=_inline_only_url_fetcher).write_pdf()

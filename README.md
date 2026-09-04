@@ -1,5 +1,10 @@
 # Zentra
 
+[![CI](https://github.com/Advaith-Ganesh/Zentra/actions/workflows/ci.yml/badge.svg)](https://github.com/Advaith-Ganesh/Zentra/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org/)
+
 **Vendor risk intelligence for UK startups and SMBs.**
 
 Zentra continuously assesses a company's third-party vendors against security
@@ -47,6 +52,28 @@ Being precise about this matters more than marketing copy.
   exploitation, no brute force — against any system, under any configuration.
 - Zentra **does not** claim a vendor is secure or insecure. It reports the
   signals it observed and how confident it is in them.
+
+## Screenshots
+
+Captured from the running application against the seeded demo dataset. Every
+score and finding shown is produced by Zentra's mock providers, which is why the
+demo workspace carries a banner saying so.
+
+| | |
+| --- | --- |
+| ![Dashboard overview](docs/screenshots/dashboard.png) | ![Vendor list](docs/screenshots/vendor-list.png) |
+| **Overview** — portfolio position, vendors needing attention, recent scans. | **Vendors** — every monitored third party with score, risk level and trend. |
+
+![Vendor detail](docs/screenshots/vendor-detail.png)
+
+**Vendor detail** — the score with its per-category breakdown, every check with
+its source, date and confidence, and each finding with a recommended action.
+
+![Public scan](docs/screenshots/public-scan.png)
+
+**Free scan** — the unauthenticated entry point, rate limited to three per hour
+per requester.
+
 
 ## Architecture
 
@@ -369,6 +396,22 @@ Recorded honestly rather than omitted:
 - Report PDFs are written to local disk. Fine for one API instance with a
   mounted volume; move to object storage before scaling to multiple replicas.
 - Rate limiting is a fixed window, so a burst can straddle a boundary.
+- The dashboard overview pans about 130px horizontally at 375px width. Every
+  other page measures clean at that width, and the wide tables are inside
+  `overflow-x-auto` containers that do scroll correctly in isolation
+  (verified: the containers compute `overflow-x: auto` and their own
+  `scrollWidth` exceeds `clientWidth`). Forcing `min-width: 0` on the tables
+  from devtools removes the pan, so the table min-width is implicated, but
+  moving that min-width to a wrapper element did not fix it and that change
+  was reverted rather than left in as a non-fix. Tracked as an open UI bug.
+- The dashboard keeps its access token in `localStorage`, so any script
+  executing on the page could read it. The alternative — an `httpOnly`,
+  `SameSite` cookie — resists that but needs CSRF protection on every state
+  change, and the same API also serves API-key clients that cannot use
+  cookies. The mitigations are a short token lifetime, a strict CSP, no
+  `dangerouslySetInnerHTML` anywhere in the app (enforced by an ESLint
+  error), and React's default escaping. `SECURITY.md` records the reasoning
+  and the migration path.
 - MSSP support is data model and feature flag only — no MSSP UI exists.
 - The frontend CSP allows `'unsafe-inline'` for scripts because Next.js emits an
   inline bootstrap into statically prerendered pages and a nonce cannot be
