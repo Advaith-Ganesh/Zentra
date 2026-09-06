@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import uuid
 from typing import Annotated
+from urllib.parse import parse_qs
 
-from fastapi import APIRouter, Form, Header, Request, Response
+from fastapi import APIRouter, Header, Request, Response
 
 from zentra.auth.deps import DbSession
 from zentra.config import get_settings
@@ -16,7 +17,7 @@ from zentra.core.feature_flags import Flag
 from zentra.core.feature_flags import require as require_flag
 from zentra.core.security import decode_token
 from zentra.db.models import User, Vendor
-from zentra.errors import AuthenticationError, ValidationError
+from zentra.errors import AuthenticationError, InvalidDomainError
 from zentra.integrations.slack.client import (
     exchange_oauth_code,
     format_check_response,
@@ -90,14 +91,15 @@ async def slack_command(
     x_slack_request_timestamp: Annotated[
         str | None, Header(alias="x-slack-request-timestamp")
     ] = None,
-    command: Annotated[str, Form()] = "",
-    text: Annotated[str, Form()] = "",
-    team_id: Annotated[str, Form()] = "",
 ) -> dict[str, object]:
     """Handle `/zentra check <domain>`.
 
-    The raw body is verified against Slack's signing secret before anything
-    else happens.
+    The raw body is read and HMAC-verified before it is parsed as a form.
+    Slack's signature covers the exact bytes it sent, so the body must be
+    read exactly once, as raw bytes, before any parsing touches it -- using
+    FastAPI's declarative ``Form(...)`` parameters here would consume the
+    request stream during dependency resolution (before this function body
+    even runs), leaving nothing for a later ``request.body()`` call to read.
     """
     require_flag(Flag.SLACK)
     body = await request.body()
@@ -106,6 +108,10 @@ async def slack_command(
     ):
         log.warning("slack_command_bad_signature")
         raise AuthenticationError("Slack signature verification failed.", code="INVALID_SIGNATURE")
+
+    form = parse_qs(body.decode("utf-8", errors="replace"))
+    team_id = (form.get("team_id") or [""])[0]
+    text = (form.get("text") or [""])[0]
 
     organization_id = organization_for_team(session, team_id)
     if organization_id is None:
@@ -123,7 +129,7 @@ async def slack_command(
 
     try:
         domain = normalize_domain(parts[1])
-    except ValidationError:
+    except InvalidDomainError:
         return {"response_type": "ephemeral", "text": "That does not look like a valid domain."}
 
     from sqlalchemy import func, select

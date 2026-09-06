@@ -223,6 +223,176 @@ def test_slack_endpoints_are_disabled_without_credentials(client: TestClient) ->
     assert response.json()["error"]["code"] == "FEATURE_DISABLED"
 
 
+@pytest.fixture
+def slack_configured(monkeypatch: pytest.MonkeyPatch):
+    """Enable the Slack feature flag with a known signing secret for one test.
+
+    ``get_settings()`` is process-cached, so the flag has to be cleared going
+    in (to pick up the patched env) and again going out (so the next test does
+    not inherit a Slack-enabled Settings object after monkeypatch has already
+    restored the real environment).
+    """
+    from zentra.config import reset_settings_cache
+
+    monkeypatch.setenv("FEATURE_SLACK", "true")
+    monkeypatch.setenv("SLACK_CLIENT_ID", "test-client-id")
+    monkeypatch.setenv("SLACK_CLIENT_SECRET", "test-client-secret")
+    monkeypatch.setenv("SLACK_SIGNING_SECRET", "test-signing-secret")
+    reset_settings_cache()
+    yield "test-signing-secret"
+    reset_settings_cache()
+
+
+def _signed_slack_request(client: TestClient, secret: str, data: dict[str, str]):
+    from urllib.parse import urlencode
+
+    body = urlencode(data).encode()
+    timestamp, signature = _slack_signature(body, secret)
+    return client.post(
+        "/api/v1/integrations/slack/commands",
+        content=body,
+        headers={
+            "content-type": "application/x-www-form-urlencoded",
+            "x-slack-request-timestamp": timestamp,
+            "x-slack-signature": signature,
+        },
+    )
+
+
+def test_slack_command_rejects_a_bad_signature(client: TestClient, slack_configured: str) -> None:
+    response = client.post(
+        "/api/v1/integrations/slack/commands",
+        data={"command": "/zentra", "text": "check x.com", "team_id": "T1"},
+        headers={
+            "x-slack-request-timestamp": str(int(time.time())),
+            "x-slack-signature": "v0=" + "0" * 64,
+        },
+    )
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "INVALID_SIGNATURE"
+
+
+def test_slack_command_from_an_unconnected_workspace(
+    client: TestClient, slack_configured: str
+) -> None:
+    response = _signed_slack_request(
+        client,
+        slack_configured,
+        {"command": "/zentra", "text": "check x.com", "team_id": "T-UNKNOWN"},
+    )
+    assert response.status_code == 200
+    assert "not connected" in response.json()["text"]
+
+
+def test_slack_command_usage_message_on_malformed_input(
+    client: TestClient, slack_configured: str, account: Account, db
+) -> None:
+    from zentra.core.crypto import encrypt_secret
+    from zentra.db.models import SlackWorkspace
+
+    db.add(
+        SlackWorkspace(
+            organization_id=account.organization_id,
+            team_id="T-USAGE",
+            encrypted_bot_token=encrypt_secret("xoxb-test-token"),
+        )
+    )
+    db.commit()
+
+    for text in ["", "check", "notcheck example.com"]:
+        response = _signed_slack_request(
+            client, slack_configured, {"command": "/zentra", "text": text, "team_id": "T-USAGE"}
+        )
+        assert response.status_code == 200
+        assert "Usage:" in response.json()["text"], text
+
+
+def test_slack_command_rejects_an_invalid_domain(
+    client: TestClient, slack_configured: str, account: Account, db
+) -> None:
+    from zentra.core.crypto import encrypt_secret
+    from zentra.db.models import SlackWorkspace
+
+    db.add(
+        SlackWorkspace(
+            organization_id=account.organization_id,
+            team_id="T-BADDOMAIN",
+            encrypted_bot_token=encrypt_secret("xoxb-test-token"),
+        )
+    )
+    db.commit()
+
+    response = _signed_slack_request(
+        client,
+        slack_configured,
+        {"command": "/zentra", "text": "check not a domain", "team_id": "T-BADDOMAIN"},
+    )
+    assert response.status_code == 200
+    assert "does not look like a valid domain" in response.json()["text"]
+
+
+def test_slack_command_reports_a_vendor_not_being_monitored(
+    client: TestClient, slack_configured: str, account: Account, db
+) -> None:
+    from zentra.core.crypto import encrypt_secret
+    from zentra.db.models import SlackWorkspace
+
+    db.add(
+        SlackWorkspace(
+            organization_id=account.organization_id,
+            team_id="T-NOVENDOR",
+            encrypted_bot_token=encrypt_secret("xoxb-test-token"),
+        )
+    )
+    db.commit()
+
+    response = _signed_slack_request(
+        client,
+        slack_configured,
+        {"command": "/zentra", "text": "check unmonitored-vendor.io", "team_id": "T-NOVENDOR"},
+    )
+    assert response.status_code == 200
+    body = response.json()["text"]
+    assert "not in your Zentra vendor list" in body
+    assert "unmonitored-vendor.io" in body
+
+
+def test_slack_command_reports_a_scanned_vendors_current_risk(
+    client: TestClient, slack_configured: str, account: Account, db
+) -> None:
+    from zentra.core.crypto import encrypt_secret
+    from zentra.db.models import Scan, SlackWorkspace, Vendor
+    from zentra.services import scans as scans_service
+
+    db.add(
+        SlackWorkspace(
+            organization_id=account.organization_id,
+            team_id="T-SCANNED",
+            encrypted_bot_token=encrypt_secret("xoxb-test-token"),
+        )
+    )
+    db.commit()
+
+    vendor_id = account.post(
+        "/api/v1/vendors", json={"name": "Northwind", "domain": "slack-checked-vendor.io"}
+    ).json()["id"]
+    vendor = db.get(Vendor, uuid.UUID(vendor_id))
+    scan = db.query(Scan).filter(Scan.vendor_id == vendor.id).one()
+    scans_service.execute_scan(db, scan.id)
+    db.commit()
+
+    response = _signed_slack_request(
+        client,
+        slack_configured,
+        {"command": "/zentra", "text": "check slack-checked-vendor.io", "team_id": "T-SCANNED"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    # The formatted response must actually reflect the vendor just scanned,
+    # not a generic placeholder.
+    assert "slack-checked-vendor.io" in str(payload) or "Northwind" in str(payload)
+
+
 # ---------------------------------------------------------------------- Teams
 @pytest.mark.parametrize(
     "url",
