@@ -176,7 +176,7 @@ jobs:
           cache-dependency-path: apps/web/package-lock.json
 
       - name: Install audit tooling
-        run: pip install bandit==1.9.2 pip-audit==2.9.0
+        run: pip install bandit==1.9.4 pip-audit==2.10.1
 
       # Static analysis of Zentra's own code. Any medium or high finding fails.
       - name: Static analysis (bandit)
