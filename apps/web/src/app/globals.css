@@ -10,11 +10,21 @@
   html {
     color-scheme: dark;
     -webkit-text-size-adjust: 100%;
+    /* Belt-and-braces guard: every element on the dashboard measures within
+       the viewport (verified with devtools), but a table with an explicit
+       min-width nested inside an overflow-x:auto container can still, in at
+       least one tested browser engine, leave documentElement.scrollWidth
+       larger than the viewport even though no individual box is. Rather than
+       let that residual quirk make the whole page pannable, bound the
+       viewport's own scroll region here; the inner tables keep their own
+       overflow-x:auto and remain scrollable exactly as designed. */
+    overflow-x: hidden;
   }
 
   body {
     @apply bg-ink-950 text-silver-200 antialiased;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'ss01';
+    overflow-x: hidden;
   }
 
   /* A single, consistent focus treatment everywhere. */

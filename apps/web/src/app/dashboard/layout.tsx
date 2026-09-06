@@ -165,7 +165,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       )}
 
-      <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">
+      {/* min-w-0 is required here: main is a flex item of the outer flex-col
+          shell, and flex items default to min-width:auto (their content's
+          min-content size, not 0). Without it, any descendant with an explicit
+          min-width — such as the 720px Table component several levels down —
+          widens main itself, upstream of every overflow-x-auto wrapper inside
+          it, and the whole page gains horizontal scroll on narrow screens. */}
+      <main id="main" className="mx-auto w-full min-w-0 max-w-7xl flex-1 px-4 py-8 sm:px-6">
         {children}
       </main>
 
