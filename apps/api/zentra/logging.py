@@ -112,8 +112,22 @@ def configure_logging(level: str = "INFO", fmt: str = "console", service: str = 
         structlog.processors.StackInfoRenderer(),
         redaction_processor,
     ]
+    # format_exc_info renders any exc_info into a plain traceback string
+    # *before* the renderer sees it. Without this, ConsoleRenderer falls back
+    # to its own rich-based pretty traceback printer, which walks every frame
+    # of the call stack rendering each one's local variables as a nested
+    # panel. On a real ASGI stack (anyio + starlette + fastapi middleware is
+    # routinely 20-40 frames deep) with objects like a Request or a
+    # SQLAlchemy Session among the locals, that rendering can take minutes
+    # rather than milliseconds -- effectively hanging the worker on the
+    # first unhandled exception it logs. This is exactly the log.exception()
+    # call in api/errors.py's catch-all handler, so any bug that raises an
+    # exception Zentra doesn't already model as a ZentraError would hang the
+    # whole process instead of returning a 500. This applies to both
+    # formats, not just json: LOG_FORMAT=console (the default everywhere,
+    # including docker-compose.yml) needs the same guard.
+    processors.append(structlog.processors.format_exc_info)
     if fmt == "json":
-        processors.append(structlog.processors.format_exc_info)
         processors.append(structlog.processors.JSONRenderer())
     else:
         processors.append(structlog.dev.ConsoleRenderer(colors=sys.stderr.isatty()))
