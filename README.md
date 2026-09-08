@@ -176,31 +176,86 @@ for the complete scoring methodology.
 
 ## Architecture
 
-| Layer | Technology |
-| --- | --- |
-| Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS, Recharts, Zod |
-| API | Python 3.11, FastAPI, Pydantic v2, SQLAlchemy 2 |
-| Worker | Celery + Redis |
-| Database | PostgreSQL (Supabase in production), with Row Level Security |
-| Auth | Supabase Auth in production; a real local email/password provider for development |
-| Payments | Stripe Checkout, Customer Portal and webhooks |
-| PDF | WeasyPrint |
-| Email | Resend-compatible abstraction, with a console provider for development |
+Three moving parts — an API, a background worker, and a browser application —
+plus a datastore and a set of external providers. The worker is not a separate
+codebase: it imports the same `zentra` Python package and ships in the same
+Docker image, so a worker running different scanning or scoring logic than the
+API that queued the job is a class of bug designed out rather than monitored
+for.
 
-See [docs/architecture.md](docs/architecture.md) for the full picture,
-[docs/scanning-engine.md](docs/scanning-engine.md) for the scanner design, and
-[docs/risk-scoring.md](docs/risk-scoring.md) for the complete scoring
-methodology.
+```mermaid
+flowchart TB
+    Browser["Browser"] -->|"HTTPS + Bearer token"| Web["Next.js app (apps/web)"]
+    Web --> API
+    Stripe["Stripe webhook"] --> API
+    Slack["Slack slash command"] --> API
+    APIKey["API key (Scale plan)"] --> API
+    API["FastAPI (apps/api)\nauth · tenancy · entitlements"] -->|enqueue| Redis["Redis (broker)"]
+    Redis --> Worker["Celery worker + beat\nscanners → scoring → verdict"]
+    API --> DB[("PostgreSQL / Supabase\nRow Level Security enforced")]
+    Worker --> DB
+    Worker -->|"passive, SSRF-guarded"| Providers["SSL Labs · HIBP · Shodan\nNVD · public DNS · HTTP headers"]
+
+    classDef store fill:#1f2430,stroke:#6b7280,color:#e5e7eb;
+    class DB store;
+```
+
+See [docs/architecture.md](docs/architecture.md) for the full request
+lifecycle, tenancy model and authentication design;
+[docs/scanning-engine.md](docs/scanning-engine.md) for the scanner design and
+SSRF protection; and [docs/risk-scoring.md](docs/risk-scoring.md) for the
+complete scoring methodology.
+
+## Technology stack
+
+| Layer | Technology | Why |
+| --- | --- | --- |
+| Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS, Recharts, Zod | App Router for server components on data-heavy pages; Zod validates every form against the same shape the API expects. |
+| API | Python 3.11, FastAPI, Pydantic v2, SQLAlchemy 2 | FastAPI's dependency injection is what makes tenancy and entitlements structurally hard to skip in a route handler; Pydantic gives one validation layer for requests, responses and settings. |
+| Worker | Celery + Redis | Scans and PDF generation must never block an HTTP request; Celery's task retry and idempotency primitives are used directly rather than reimplemented. |
+| Database | PostgreSQL (Supabase-compatible), Row Level Security | RLS enforced with `FORCE` puts tenant isolation in the database itself, not only in application code. |
+| Auth | Supabase Auth in production; a real local email/password provider for development | The product runs end-to-end with zero external accounts in development — the local provider is a genuine implementation (Argon2id, signed sessions), not a stub. |
+| Payments | Stripe Checkout, Customer Portal, webhooks | Webhook-driven subscription state with idempotent event handling, rather than trusting the client's view of its own plan. |
+| PDF | WeasyPrint | HTML/CSS templating for the vendor risk register, rendered server-side with no remote resource fetching (SSRF-hardened). |
+| Email | A provider abstraction with a Resend adapter and a console adapter | The console adapter means the whole app works with zero email credential in development. |
+
+## Project structure
+
+<details>
+<summary>Expand the full directory layout</summary>
 
 ```
-apps/web       Next.js browser application
-apps/api       FastAPI service, scanning engine, scoring engine, Celery worker
-workers/       Worker entry point documentation (the worker ships in the API image)
-supabase/      Ordered SQL migrations — the single source of truth for schema
-infrastructure Dockerfiles, Railway and Vercel configuration
-docs/          Architecture, scanning engine, risk scoring, API reference
-scripts/       Helper scripts
+apps/web/src/
+  app/                 Next.js App Router pages
+  components/          Design system and domain components
+  lib/                 Typed API client, types, presentation helpers
+  hooks/                Session and data-loading hooks
+
+apps/api/zentra/
+  config.py            Settings; refuses unsafe production configuration
+  logging.py           Structured logging with secret redaction
+  errors.py            Error taxonomy -> the single API error envelope
+  db/                  SQLAlchemy models, session, migration runner
+  core/                Security primitives, rate limiting, entitlements,
+                        feature flags, domain validation, audit logging
+  auth/                Local and Supabase auth providers; FastAPI dependencies
+  scanners/            The scanning engine (see docs/scanning-engine.md)
+  scoring/             Deterministic scoring and plain-English verdicts
+  services/            Business logic: vendors, scans, findings, reports,
+                        alerts, billing, API keys, benchmarking
+  integrations/        Email, Slack, Teams
+  reports/             WeasyPrint templates and PDF rendering
+  api/v1/               HTTP routes; thin, delegating to services
+  workers/             Celery app, tasks, dispatch
+  scripts/             Demo seeder
+
+supabase/migrations/   Ordered SQL — the single source of truth for schema
+infrastructure/        Dockerfiles and deployment configuration (Railway, Vercel)
+docs/                  Architecture, scanning engine, risk scoring, API reference
+scripts/               Local developer helper scripts
 ```
+
+</details>
 
 ## Local setup
 
