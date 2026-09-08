@@ -440,6 +440,56 @@ Migration `0003_rls.sql` enables **and forces** Row Level Security on every
 tenant table, and revokes column-level access to credential columns from the
 `authenticated` role.
 
+## Usage
+
+Try the free scan with no account, against the running dev stack:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/public/scan \
+  -H "Content-Type: application/json" \
+  -d '{"domain": "example.com"}'
+```
+
+Sign in and add a vendor to monitor (the session token comes from
+`POST /api/v1/auth/signin`):
+
+```bash
+curl -X POST http://localhost:8000/api/v1/vendors \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Stripe", "domain": "stripe.com", "criticality": "high"}'
+```
+
+This queues an immediate scan and returns the vendor record; the score
+appears once the worker finishes (usually a few seconds against mock
+providers). The same flow is exactly what the dashboard's "Add vendor" form
+does.
+
+## API
+
+The full OpenAPI schema is in [docs/openapi.json](docs/openapi.json) and
+documented in [docs/api.md](docs/api.md); with the API running locally,
+interactive docs are at <http://localhost:8000/docs>.
+
+Two authentication schemes are supported on the same API:
+
+| Scheme | Header | Used by |
+| --- | --- | --- |
+| Session token | `Authorization: Bearer <access_token>` | The Zentra dashboard |
+| API key | `X-API-Key: zk_live_...` | Scale-plan integrations (create one at `POST /api/v1/api-keys`; the secret is shown once and stored only as a hash) |
+
+Every error response uses a single envelope:
+
+```json
+{
+  "error": {
+    "code": "VENDOR_NOT_FOUND",
+    "message": "Vendor could not be found.",
+    "request_id": "8f0c..."
+  }
+}
+```
+
 ## Testing
 
 ```bash
