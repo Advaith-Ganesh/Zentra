@@ -73,6 +73,46 @@ public-signal-only scan can actually tell you.
 
 ---
 
+## Key features
+
+Every item below is implemented and exercised by the test suite — nothing
+here is aspirational.
+
+- **Continuous vendor scanning.** Add a vendor by domain; Zentra scans it
+  immediately and on a schedule, across six categories: TLS/certificate
+  posture, breach history, internet exposure, known vulnerabilities, DNS
+  security (SPF/DMARC/DNSSEC), and web/browser security headers.
+- **Deterministic, explainable scoring.** A 0–100 score with a full
+  category-by-category breakdown of where every point came from — no opaque
+  ML model, and a scan that only partly completes is never presented as a
+  confident "Low risk".
+- **Plain-English verdicts.** Each score comes with a headline explanation,
+  a specific recommended action, and every finding's "what to do about it".
+- **Auditor-ready PDF reports.** A vendor risk register a compliance owner
+  can hand to an auditor or an enterprise customer's security team, with
+  optional white-label branding.
+- **Material-change alerting.** Zentra tracks each vendor's score over time
+  and raises an alert when the risk level changes materially, not on every
+  minor fluctuation.
+- **Unauthenticated free scan.** A rate-limited, no-signup entry point at
+  `/scan` for prospects to try the product against a real domain.
+- **Multi-tenant from the ground up.** Postgres Row Level Security enforced
+  (`ENABLE` *and* `FORCE`) on every tenant table, on top of query-level
+  scoping — cross-tenant access is structurally impossible, not just checked.
+- **Billing and plan entitlements.** Stripe Checkout, the customer portal,
+  webhook-driven subscription state, and entitlements re-derived from the
+  database on every request rather than trusted from the client.
+- **Public API and integrations.** API keys for the Scale plan, a Slack
+  slash command (`/zentra check <domain>`), and Microsoft Teams webhook
+  alerts.
+- **Anonymized benchmarking.** Compare a vendor's score against its peer
+  cohort, withheld below a minimum cohort size to prevent re-identification.
+- **SSRF-hardened scanning.** The scan target is never trusted: resolved IPs
+  are validated against every RFC1918/loopback/link-local/cloud-metadata
+  range, the outbound connection is pinned to the validated IP to defeat
+  DNS-rebinding, and only passive checks are ever performed — no
+  authentication attempts, exploitation, or brute force, against any target.
+
 ## What Zentra is not
 
 Being precise about this matters more than marketing copy.
