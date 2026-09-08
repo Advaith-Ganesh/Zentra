@@ -393,6 +393,118 @@ def test_slack_command_reports_a_scanned_vendors_current_risk(
     assert "slack-checked-vendor.io" in str(payload) or "Northwind" in str(payload)
 
 
+def test_slack_oauth_callback_redirects_on_missing_params(
+    client: TestClient, slack_configured: str
+) -> None:
+    response = client.get("/api/v1/integrations/slack/callback", follow_redirects=False)
+    assert response.status_code == 302
+    assert "slack=error" in response.headers["location"]
+
+
+def test_slack_oauth_callback_redirects_on_denied_install(
+    client: TestClient, slack_configured: str
+) -> None:
+    response = client.get(
+        "/api/v1/integrations/slack/callback",
+        params={"error": "access_denied"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "slack=error" in response.headers["location"]
+
+
+def test_slack_oauth_callback_rejects_a_forged_state(
+    client: TestClient, slack_configured: str
+) -> None:
+    response = client.get(
+        "/api/v1/integrations/slack/callback",
+        params={"code": "any-code", "state": "not-a-real-signed-token"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "slack=invalid_state" in response.headers["location"]
+
+
+def test_slack_oauth_callback_completes_the_install(
+    client: TestClient, slack_configured: str, account: Account, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The full round trip: a real state token, a mocked Slack token exchange.
+
+    The signature-verification tests cover the slash command's HMAC check; this
+    covers the *other* half of the Slack integration, the OAuth install flow,
+    which had zero test coverage before this -- including the CSRF-style state
+    token that is the only thing standing between this endpoint and an
+    attacker linking their own Slack workspace to a victim's organization.
+    """
+    from zentra.core.security import create_access_token
+
+    state = create_access_token(
+        str(account.user_id),
+        ttl_seconds=600,
+        extra_claims={"typ": "slack_state", "org": str(account.organization_id)},
+    )
+
+    def fake_exchange(code: str) -> dict[str, object]:
+        assert code == "a-real-looking-code"
+        return {
+            "ok": True,
+            "access_token": "xoxb-fake-bot-token",
+            "team": {"id": "T-INSTALLED", "name": "Acme Fintech"},
+            "bot_user_id": "U-BOT",
+            "scope": "commands,chat:write",
+        }
+
+    monkeypatch.setattr("zentra.api.v1.slack.exchange_oauth_code", fake_exchange)
+
+    response = client.get(
+        "/api/v1/integrations/slack/callback",
+        params={"code": "a-real-looking-code", "state": state},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "slack=connected" in response.headers["location"]
+
+
+def test_slack_oauth_callback_persists_the_workspace(
+    client: TestClient, slack_configured: str, account: Account, db, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from zentra.core.security import create_access_token
+    from zentra.db.models import SlackWorkspace
+
+    state = create_access_token(
+        str(account.user_id),
+        ttl_seconds=600,
+        extra_claims={"typ": "slack_state", "org": str(account.organization_id)},
+    )
+
+    def fake_exchange(code: str) -> dict[str, object]:
+        return {
+            "ok": True,
+            "access_token": "xoxb-fake-bot-token",
+            "team": {"id": "T-PERSISTED", "name": "Acme Fintech"},
+            "bot_user_id": "U-BOT",
+            "scope": "commands,chat:write",
+        }
+
+    monkeypatch.setattr("zentra.api.v1.slack.exchange_oauth_code", fake_exchange)
+
+    response = client.get(
+        "/api/v1/integrations/slack/callback",
+        params={"code": "code", "state": state},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+
+    workspace = (
+        db.query(SlackWorkspace)
+        .filter(SlackWorkspace.organization_id == account.organization_id)
+        .one()
+    )
+    assert workspace.team_id == "T-PERSISTED"
+    # The bot token must never be stored in plaintext.
+    assert "xoxb-fake-bot-token" not in workspace.encrypted_bot_token
+
+
 # ---------------------------------------------------------------------- Teams
 @pytest.mark.parametrize(
     "url",
