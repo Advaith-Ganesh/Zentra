@@ -134,6 +134,11 @@ Captured from the running application against the seeded demo dataset. Every
 score and finding shown is produced by Zentra's mock providers, which is why the
 demo workspace carries a banner saying so.
 
+![Landing page](docs/screenshots/landing.png)
+
+**Landing page** — the public marketing page, with the free scan as the
+primary call to action.
+
 | | |
 | --- | --- |
 | ![Dashboard overview](docs/screenshots/dashboard.png) | ![Vendor list](docs/screenshots/vendor-list.png) |
