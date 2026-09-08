@@ -163,7 +163,13 @@ jobs:
       contents: read
 
     steps:
+      # gitleaks scans the exact commit range a push introduced, which needs
+      # the full history to resolve -- the default shallow clone (depth 1)
+      # makes that range ambiguous and fails the job whenever a push carries
+      # more than one commit.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
