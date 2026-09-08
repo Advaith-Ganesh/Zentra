@@ -680,6 +680,13 @@ Realistic next steps, not a marketing wishlist:
 | [SECURITY.md](SECURITY.md) | Security policy and responsible disclosure |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to work on Zentra |
 
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the
+development setup (no external API credentials required — the default
+configuration runs entirely on deterministic offline providers), coding
+standards, and what CI checks before a pull request can merge.
+
 ## Licence
 
 MIT — see [LICENSE](LICENSE).
