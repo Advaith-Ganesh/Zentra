@@ -490,6 +490,35 @@ Every error response uses a single envelope:
 }
 ```
 
+## Security
+
+The full policy, threat model and vulnerability reporting process are in
+[SECURITY.md](SECURITY.md). The mechanisms actually implemented:
+
+- **SSRF defence in depth for the scanner.** A scan target's domain is
+  resolved, every resolved IP is checked against RFC1918, loopback,
+  link-local, CGNAT and cloud-metadata ranges, and the outbound connection is
+  then *pinned to that validated IP* — so a second DNS answer at connection
+  time (DNS rebinding) cannot bypass the check. Redirects are re-validated
+  the same way, with a hard redirect limit. See
+  [docs/scanning-engine.md § SSRF protection](docs/scanning-engine.md).
+- **Passive-only scanning.** No authentication attempts, exploitation, or
+  brute force are ever performed against a scanned target, under any
+  configuration — this is enforced in code, not only policy.
+- **Row Level Security, forced.** Every tenant table has RLS `ENABLE`*d* and
+  `FORCE`*d* (the latter is what makes the policies apply even to the table
+  owner), on top of query-level tenant scoping in every service function.
+- **Argon2id password hashing** at OWASP-recommended parameters, SHA-256
+  API-key hashing, and Fernet-encrypted storage for third-party integration
+  secrets (Slack bot tokens, Teams webhook URLs).
+- **Structured logging with secret redaction.** Log output is scanned for
+  known credential patterns (Stripe keys, Slack tokens, JWTs) before it is
+  written, regardless of which field they appear under.
+- **No fabricated results, ever.** A provider outage reduces coverage and
+  confidence — it is never presented as a passing check, and the scoring
+  engine refuses to publish a risk level below a minimum coverage threshold
+  rather than show a confident "Low risk" from a scan that mostly failed.
+
 ## Testing
 
 ```bash
