@@ -1,41 +1,75 @@
 # Zentra
 
+**Vendor risk intelligence for UK startups and SMBs.**
+
+Zentra continuously assesses a company's third-party vendors against publicly
+available security signals, and turns the result into a 0–100 risk score, a
+plain-English explanation, a specific recommended action, and an
+auditor-friendly vendor risk register — without requiring a security analyst
+on staff.
+
 [![CI](https://github.com/Advaith-Ganesh/Zentra/actions/workflows/ci.yml/badge.svg)](https://github.com/Advaith-Ganesh/Zentra/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/)
-[![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6.svg?logo=typescript&logoColor=white)](apps/web/tsconfig.json)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg?logo=next.js&logoColor=white)](https://nextjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.141-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1.svg?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 
-**Vendor risk intelligence for UK startups and SMBs.**
+---
 
-Zentra continuously assesses a company's third-party vendors against security
-signals available from public sources, then turns the result into a 0–100 risk
-score, a plain-English explanation of the biggest risk, a specific action to
-take, and an auditor-friendly vendor risk register.
+## Overview
 
-The product exists to answer three questions per vendor, for someone who is not
-a security analyst:
+Small UK companies increasingly have to answer "how do you manage third-party
+risk?" — from an enterprise customer's security questionnaire, an insurer, or
+their own board — and most have no security team and no budget for one.
+Spreadsheets tracking vendor risk go stale the day they're written, because
+nobody re-checks fifty vendors by hand every month.
 
-- What is wrong?
-- How serious is it?
-- What should I do?
+Zentra is a small, opinionated tool built to close that gap: point it at a
+vendor's domain, and it keeps watching public security signals (TLS posture,
+breach history, exposed services, known vulnerabilities, email/DNS hardening,
+web security headers) and re-scores the vendor whenever something changes,
+with the reasoning behind every score shown, not hidden behind a single
+number.
+
+**Who it's for:** a founder, ops lead, or compliance owner at a UK SMB or
+fintech (roughly 10–80 people) who needs a defensible, continuously-updated
+vendor risk register — not a security team running their own scanning
+infrastructure.
+
+**What it deliberately is not:** see [What Zentra is not](#what-zentra-is-not)
+below — that distinction matters more here than in most projects, because the
+product's credibility depends on never overstating what an automated,
+public-signal-only scan can actually tell you.
 
 ---
 
 ## Contents
 
+- [Overview](#overview)
+- [Key features](#key-features)
+- [Screenshots](#screenshots)
+- [How it works](#how-it-works)
 - [What Zentra is not](#what-zentra-is-not)
 - [Architecture](#architecture)
-- [Local setup](#local-setup)
-- [Running the stack](#running-the-stack)
+- [Technology stack](#technology-stack)
+- [Project structure](#project-structure)
+- [Getting started](#getting-started)
 - [Environment variables](#environment-variables)
 - [External accounts and API keys](#external-accounts-and-api-keys)
-- [Database and migrations](#database-and-migrations)
+- [Usage](#usage)
+- [API](#api)
+- [Security](#security)
 - [Testing](#testing)
 - [Code quality](#code-quality)
 - [Deployment](#deployment)
 - [Troubleshooting](#troubleshooting)
 - [Known limitations](#known-limitations)
+- [Roadmap](#roadmap)
 - [Documentation](#documentation)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
