@@ -148,6 +148,31 @@ its source, date and confidence, and each finding with a recommended action.
 **Free scan** — the unauthenticated entry point, rate limited to three per hour
 per requester.
 
+## How it works
+
+1. **Add a vendor** by domain from the dashboard, or try one anonymously via
+   the free scan.
+2. **Zentra scans it immediately**, then on a recurring schedule: TLS
+   certificate and configuration, breach history, exposed internet-facing
+   services, known CVEs against disclosed software, DNS/email hardening, and
+   web security headers — each through a dedicated scanner with a real
+   provider adapter and a deterministic mock fallback (see
+   [Environment variables](#environment-variables)).
+3. **Results are scored**, not just collected: each category contributes a
+   weighted, capped number of points, severe findings enforce a score floor,
+   and coverage/confidence are tracked so a half-completed scan is never
+   presented as a confident result.
+4. **A plain-English verdict is generated** — the biggest problem, why it
+   matters, and what to do about it — alongside the full point-by-point
+   breakdown for anyone who wants it.
+5. **If the risk level changed materially**, an alert is raised and (if
+   configured) delivered to Slack or Microsoft Teams.
+6. **The vendor risk register** — every vendor, its current score, and its
+   history — can be exported as a PDF at any time.
+
+See [docs/scanning-engine.md](docs/scanning-engine.md) for the full scan
+lifecycle sequence diagram and [docs/risk-scoring.md](docs/risk-scoring.md)
+for the complete scoring methodology.
 
 ## Architecture
 
