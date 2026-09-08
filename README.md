@@ -523,8 +523,8 @@ The full policy, threat model and vulnerability reporting process are in
 
 ```bash
 make test          # everything
-make test-api      # 410 backend tests
-make test-web      # 49 frontend tests
+make test-api      # backend tests (439 at time of writing)
+make test-web      # frontend tests (49 at time of writing)
 make test-api-cov  # with a coverage report
 ```
 
