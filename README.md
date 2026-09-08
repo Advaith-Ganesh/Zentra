@@ -235,7 +235,7 @@ apps/web/src/
   app/                 Next.js App Router pages
   components/          Design system and domain components
   lib/                 Typed API client, types, presentation helpers
-  hooks/                Session and data-loading hooks
+  hooks/               Session and data-loading hooks
 
 apps/api/zentra/
   config.py            Settings; refuses unsafe production configuration
@@ -251,7 +251,7 @@ apps/api/zentra/
                         alerts, billing, API keys, benchmarking
   integrations/        Email, Slack, Teams
   reports/             WeasyPrint templates and PDF rendering
-  api/v1/               HTTP routes; thin, delegating to services
+  api/v1/              HTTP routes; thin, delegating to services
   workers/             Celery app, tasks, dispatch
   scripts/             Demo seeder
 
