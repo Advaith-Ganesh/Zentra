@@ -154,6 +154,11 @@ its source, date and confidence, and each finding with a recommended action.
 **Free scan** — the unauthenticated entry point, rate limited to three per hour
 per requester.
 
+| | |
+| --- | --- |
+| ![Findings](docs/screenshots/findings.png) | ![Reports](docs/screenshots/reports.png) |
+| **Findings** — every tracked issue across all vendors, worst first, each with a recommended action. | **Reports** — a generated PDF vendor risk register, ready to download. |
+
 ## How it works
 
 1. **Add a vendor** by domain from the dashboard, or try one anonymously via
