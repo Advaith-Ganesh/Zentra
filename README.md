@@ -257,7 +257,7 @@ scripts/               Local developer helper scripts
 
 </details>
 
-## Local setup
+## Getting started
 
 **Prerequisites:** Python 3.11+, Node 20+, Docker (or a local PostgreSQL 16 and
 Redis 7).
@@ -349,7 +349,7 @@ implementation, and authentication runs against Zentra's own user table with
 real Argon2id hashing. The entire product — sign-up, scanning, scoring,
 findings, PDF reports, alerts — works end to end with no external account.
 
-## Running the stack
+### Quick reference
 
 | Component | Command | Port |
 | --- | --- | --- |
