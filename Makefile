@@ -164,13 +164,13 @@ build: ## Production build of the frontend
 	cd $(WEB_DIR) && npm run build
 
 .PHONY: security
-security: ## Static security analysis and dependency audit
-	cd $(API_DIR) && .venv/bin/bandit -q -c pyproject.toml -r zentra || true
-	cd $(API_DIR) && .venv/bin/pip-audit --progress-spinner off || true
-	cd $(WEB_DIR) && npm audit --omit=dev || true
+security: ## Static security analysis and dependency audit (matches CI's severity gates)
+	cd $(API_DIR) && .venv/bin/bandit -c pyproject.toml -r zentra -ll
+	cd $(API_DIR) && .venv/bin/pip-audit --progress-spinner off
+	cd $(WEB_DIR) && npm audit --omit=dev --audit-level=moderate
 
 .PHONY: check
-check: lint typecheck test build ## Everything CI runs
+check: lint typecheck test build security ## Everything CI runs
 
 # ----------------------------------------------------------------------- misc
 .PHONY: openapi
