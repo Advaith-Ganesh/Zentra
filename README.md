@@ -594,4 +594,4 @@ Recorded honestly rather than omitted:
 
 ## Licence
 
-Proprietary. All rights reserved.
+MIT — see [LICENSE](LICENSE).
