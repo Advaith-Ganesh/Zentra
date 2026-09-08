@@ -10,6 +10,25 @@ network, and cannot be bypassed by talking to a different layer.
 
 ## 1. Shape of the system
 
+```mermaid
+flowchart TB
+    Browser["Browser"] -->|"HTTPS + Bearer token"| Web["Next.js app (apps/web)\nTyped API client only"]
+    Web --> API
+    Stripe["Stripe (webhook)"] --> API
+    Slack["Slack (slash command)"] --> API
+    APIKey["API key (Scale plan)"] --> API
+    API["FastAPI (apps/api)\nauth · tenancy · entitlements"] -->|enqueue| Redis["Redis (broker)"]
+    Redis --> Worker["Celery worker + beat\nscanners → scoring → verdict"]
+    API --> DB[("PostgreSQL / Supabase\nRow Level Security on every tenant table")]
+    Worker --> DB
+    Worker -->|"passive, SSRF-guarded"| Providers["SSL Labs · HIBP · Shodan\nNVD · public DNS · HTTP headers"]
+
+    classDef store fill:#1f2430,stroke:#6b7280,color:#e5e7eb;
+    class DB store;
+```
+
+The same diagram, as plain text for anywhere Mermaid isn't rendered:
+
 ```
                       ┌──────────────────────────────┐
    Browser  ────────► │  Next.js app (apps/web)      │
