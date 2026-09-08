@@ -386,6 +386,7 @@ production; the OpenAPI schema remains available at `/openapi.json`).
 | `DATABASE_URL` | PostgreSQL connection string |
 | `REDIS_URL`, `CELERY_BROKER_URL` | Redis for rate limiting and the job broker |
 | `CORS_ALLOWED_ORIGINS` | Explicit browser origins. A wildcard is rejected in production |
+| `ALLOW_PRIVATE_SCAN_TARGETS` | Disables the SSRF guard. **Must be `false`**; refused at startup in production |
 | `STRIPE_*` | Billing. Absent means checkout is unavailable; entitlements still enforced |
 | `HIBP_API_KEY`, `SHODAN_API_KEY`, `NVD_API_KEY` | Optional. Absent means the check reports "not assessed" |
 
