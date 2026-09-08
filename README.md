@@ -650,6 +650,25 @@ Recorded honestly rather than omitted:
   solicitor review** before commercial launch, and are labelled as such in the
   product.
 
+## Roadmap
+
+Realistic next steps, not a marketing wishlist:
+
+- **Move report storage to object storage** (S3-compatible) — the current
+  local-disk storage is the main blocker to running more than one API
+  replica.
+- **A vendor questionnaire/evidence-collection workflow** — the human side of
+  third-party risk management that automated scanning alone can't cover.
+- **An MSSP UI** — the data model and feature flag already exist
+  (`Flag.MSSP`); there is no interface built on top of them yet.
+- **Real-time scan status** in the dashboard instead of polling, once there's
+  a concrete reason polling's simplicity stops being the right tradeoff.
+- **A CSP nonce pipeline** for Next.js's inline bootstrap script, replacing
+  the current `'unsafe-inline'` allowance — blocked upstream on Next.js not
+  yet supporting per-request nonces on statically prerendered pages.
+- **Interactive Slack Block Kit UI** for the `/zentra check` command, beyond
+  the current plain-text response.
+
 ## Documentation
 
 | Document | Contents |
