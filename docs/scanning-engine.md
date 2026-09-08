@@ -231,17 +231,31 @@ A scan whose scanners all errored is `failed`. A scan where some succeeded is
 
 ## 7. Scan lifecycle
 
-```
-User adds a vendor
-   → scan row created (queued)          ← the HTTP request ends here
-   → Celery task dispatched
-   → worker: status=running
-   → scanners run, results normalized
-   → score calculated, verdict written
-   → scan_results persisted with provenance
-   → findings synced (new / refreshed / auto-resolved)
-   → previous score compared; alert raised if the change is material
-   → vendor's current position updated; next scan scheduled
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant API as FastAPI
+    participant Q as Redis (broker)
+    participant W as Celery worker
+    participant DB as PostgreSQL
+
+    U->>API: Add vendor / trigger scan
+    API->>DB: Insert scan row (status=queued)
+    API->>Q: Dispatch task
+    API-->>U: 201, scan queued (request ends here)
+    Q->>W: Deliver task
+    W->>DB: status=running
+    W->>W: Run scanners, normalize results
+    W->>W: Calculate score, write verdict
+    W->>DB: Persist scan_results with provenance
+    W->>DB: Sync findings (new / refreshed / auto-resolved)
+    W->>DB: Compare previous score
+    alt Change is material
+        W->>DB: Raise alert
+    end
+    W->>DB: Update vendor's current position, schedule next scan
+    U->>API: Poll for scan status
+    API-->>U: Current status / completed result
 ```
 
 Scans never run inside an HTTP request. The API returns a `queued` scan and the
