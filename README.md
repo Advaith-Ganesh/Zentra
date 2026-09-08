@@ -630,16 +630,6 @@ Recorded honestly rather than omitted:
 - Report PDFs are written to local disk. Fine for one API instance with a
   mounted volume; move to object storage before scaling to multiple replicas.
 - Rate limiting is a fixed window, so a burst can straddle a boundary.
-- On narrow screens, `document.documentElement.scrollWidth` on some
-  dashboard pages reports wider than the viewport, because a wide table
-  inside an `overflow-x-auto` container is (correctly) still wide, just
-  clipped. That reading is not the same thing as the page actually being
-  scrollable to a real user: `overflow-x: hidden` on `html`/`body` (see
-  `globals.css`) blocks user-initiated scrolling (touch swipe, wheel,
-  keyboard), which is what matters — verified with a simulated touch
-  gesture, not just `window.scrollTo()`, which bypasses `overflow: hidden`
-  by spec and is not representative of a real user. The inner tables keep
-  their own independent horizontal scroll, unaffected.
 - The dashboard keeps its access token in `localStorage`, so any script
   executing on the page could read it. The alternative — an `httpOnly`,
   `SameSite` cookie — resists that but needs CSRF protection on every state
