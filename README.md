@@ -58,6 +58,7 @@ public-signal-only scan can actually tell you.
 - [Getting started](#getting-started)
 - [Environment variables](#environment-variables)
 - [External accounts and API keys](#external-accounts-and-api-keys)
+- [Database and migrations](#database-and-migrations)
 - [Usage](#usage)
 - [API](#api)
 - [Security](#security)
@@ -69,7 +70,7 @@ public-signal-only scan can actually tell you.
 - [Roadmap](#roadmap)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
-- [License](#license)
+- [Licence](#licence)
 
 ---
 
